@@ -1,0 +1,44 @@
+from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy.orm import sessionmaker, declarative_base
+from marshmallow import Schema, fields, ValidationError
+
+Base = declarative_base()
+
+class User(Base):
+    __tablename__ = 'users'
+    
+    id = Column(Integer, primary_key=True)
+    username = Column(String)
+
+class UserSchema(Schema):
+    username = fields.String(required=True, validate=lambda s: 3 <= len(s) <= 20)
+
+# Создание базы данных (иногда нужно указать URL вашей СУБД)
+engine = create_engine('sqlite:///:memory:')
+Base.metadata.create_all(engine)
+Session = sessionmaker(bind=engine)
+session = Session()
+
+# Пример использования
+user_schema = UserSchema()
+
+# Правильный ввод
+try:
+    user_data = user_schema.load({"username": "valid_user"})
+    user = User(**user_data)
+    session.add(user)
+    session.commit()
+    print("User added:", user.username)
+except ValidationError as err:
+    print("Validation errors:", err.messages)
+
+# Неправильный ввод
+try:
+    user_data = user_schema.load({"username": "ab"})  # Слишком короткий
+except ValidationError as err:
+    print("Validation errors for 'ab':", err.messages)
+
+try:
+    user_data = user_schema.load({"username": "a_very_long_username"})  # Слишком длинный
+except ValidationError as err:
+    print("Validation errors for 'a_very_long_username':", err.messages)
