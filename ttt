@@ -21,3 +21,5 @@ def generate_random_text(min_length=3, max_length=1500):
 if __name__ == "__main__":
     generated_text = generate_random_text()
     print(generated_text)
+
+https://disk.yandex.ru/d/ybl6Szriz24ADQ
