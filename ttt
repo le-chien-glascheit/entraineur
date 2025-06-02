@@ -32,3 +32,34 @@ https://disk.yandex.ru/d/ybl6Szriz24ADQ
 
 
 Если вы попытаетесь конвертировать файл в формат WebP с тем же именем, что и уже существующий файл, вы увидите сообщение, что файл уже есть. Рекомендуется использовать другое имя для нового файла, чтобы избежать конфликта.
+
+
+import pytest
+from fastapi.testclient import TestClient
+from app import app
+import tempfile
+
+client = TestClient(app)
+
+@pytest.fixture
+def temp_file():
+    # Создаем временный файл для теста
+    with tempfile.NamedTemporaryFile(delete=True, suffix=".txt") as f:
+        # Записываем данные в файл
+        f.write(b"Hello, this is a test file.")
+        f.flush()  # Убедимся, что данные записаны в файл
+        yield f  # Возвращаем временный файл для использования в тесте
+
+def test_upload_file(temp_file):
+    # Отправляем файл на эндпоинт
+    with open(temp_file.name, "rb") as file:
+        response = client.post(
+            "/upload/",
+            files={"file": (temp_file.name, file, "text/plain")}
+        )
+    
+    assert response.status_code == 200
+    assert response.json() == {
+        "filename": temp_file.name.split("/")[-1],  # Имя файла
+        "content_length": len(b"Hello, this is a test file.")  # Длина содержимого
+    }
