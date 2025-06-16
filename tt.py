@@ -132,3 +132,24 @@ session.commit()
 # Проверяем данные
 for post in session.query(Post).all():
     print(f"Post ID: {post.id}, Title: '{post.title}', User: '{post.user.name}'")
+
+___________________________________
+
+from polyfactory.factories import Factory, AbstractFactory
+from polyfactory import Field
+
+class PostFactory(Factory):
+    __model__ = Post
+    title = Field(factory=lambda: "Sample Post Title")
+
+class UserFactory(AbstractFactory):
+    __model__ = User
+
+    username = Field(factory=lambda: "user_{0}".format(random.randint(1, 1000)))
+    
+    # Кастомизируем метод
+    def create_with_posts(self, count: int = 3):
+        user = self.build()
+        user.posts = PostFactory.create_batch(count, user=user)
+        return user
+
