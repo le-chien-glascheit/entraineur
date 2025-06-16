@@ -66,3 +66,69 @@ if __name__ == "__main__":
 
     # Проверка результата
     print(f"Parent: {parent.name}, Children: {[child.name for child in parent.children]}")
+
+
+
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey
+from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.ext.declarative import declarative_base
+from polifactory import Factory, LazyAttribute, Sequence
+
+Base = declarative_base()
+
+# Определим модели
+
+class User(Base):
+    __tablename__ = 'users'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    posts = relationship('Post', back_populates='user')
+
+class Post(Base):
+    __tablename__ = 'posts'
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    user = relationship('User', back_populates='posts')
+
+# Создаем фабрики
+
+class UserFactory(Factory):
+    class Meta:
+        model = User
+    
+    id = Sequence(int)
+    name = Sequence(lambda n: f'User {n}')
+
+class PostFactory(Factory):
+    class Meta:
+        model = Post
+    
+    id = Sequence(int)
+    title = Sequence(lambda n: f'Post {n}')
+    
+    # Устанавливаем пользователя вручную
+    user = LazyAttribute(lambda obj: UserFactory())
+
+# Пример использования:
+
+# Создаем движок и сессию
+engine = create_engine('sqlite:///:memory:')
+Base.metadata.create_all(engine)
+Session = sessionmaker(bind=engine)
+session = Session()
+
+# Используем фабрики для создания объектов
+user = UserFactory.create()
+posts = PostFactory.create_batch(5, user=user)
+
+# Добавляем пользователя и посты в сессию
+session.add(user)
+session.add_all(posts)
+session.commit()
+
+# Проверяем данные
+for post in session.query(Post).all():
+    print(f"Post ID: {post.id}, Title: '{post.title}', User: '{post.user.name}'")
